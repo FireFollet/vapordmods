@@ -24,7 +24,7 @@ class vapordmods:
 
         if os.path.exists(self.cfg_filename):
             if os.path.isfile(self.cfg_filename) and os.access(self.cfg_filename, os.R_OK):
-                self.reloadcfg()
+                self.reload_cfg()
             else:
                 raise PermissionError("'{}' is not a file or cannot be read.".format(self.cfg_filename))
         elif os.path.exists(install_dir):
@@ -41,12 +41,12 @@ class vapordmods:
             if not os.path.exists(mod):
                 os.makedirs(mod)
 
-    async def reloadcfg(self):
+    async def reload_cfg(self):
         f = open(self.cfg_filename, "r")
         self.cfg_data = yaml.safe_load(f)
         f.close()
 
-    async def getmodinfo(self):
+    async def get_mods_info(self, api_key: str = None):
         if self.cfg_data['mods']:
             modstatus = {self.__THUNDERSTORE_NAME: {}, self.__NEXUSMODS_NAME: {}, self.__STEAMWORKSHOP_NAME: {}}
             for provider in self.cfg_data['mods']:
@@ -68,7 +68,7 @@ class vapordmods:
                                 else:
                                     modstatus[self.__THUNDERSTORE_NAME][app][mods] = data
                         else:
-                            r = await locals()[provider].get_update(app, mods, value)
+                            r = await locals()[provider].get_update(app, mods, value, api_key)
                             if r:
                                 with r.json() as manifest:
                                     latestversion = manifest['latest']['version_number']

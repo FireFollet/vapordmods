@@ -22,7 +22,7 @@ async def get_update(namespace: str, name: str, version: str = None, api_key: st
                 dependencies = j['dependencies']
                 download_url = j['download_url']
 
-            data = {'app': j['namespace'], 'mods': j['name'], 'version': version, 'dependencies': dependencies,
+            data = {'app': namespace, 'mods': name, 'version': version, 'dependencies': dependencies,
                     'download_url': str(download_url).replace('https://', 'https://' + j['community_listings'][0]['community'] + '.'), 'manifest': j}
             return {'status': resp.status, 'data': data}
         else:
