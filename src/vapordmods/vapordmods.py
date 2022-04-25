@@ -1,7 +1,11 @@
+import asyncio
+import aiofiles
 import os
+import aiohttp
 import yaml
 import logging
 import json
+import zipfile
 from src.api import thunderstore, nexusmods
 
 
@@ -11,22 +15,22 @@ class vapordmods:
     __THUNDERSTORE_NAME = 'thunderstore'
     __NEXUSMODS_NAME = 'nexusmods'
 
-    def __init__(self, install_dir: str):
-        self.cfg_filename = os.path.join(install_dir, self.__CFG_FILENAME)
+    def __init__(self, mods_dir: str):
+        self.mods_dir = mods_dir
+        self.cfg_filename = os.path.join(mods_dir, self.__CFG_FILENAME)
         self.cfg_data = None
         self.mods_info = None
-        self.thunderstore_dir = os.path.join(install_dir, self.__MANIFESTS_DIR, self.__THUNDERSTORE_NAME)
-        self.nexusmods_dir = os.path.join(install_dir, self.__MANIFESTS_DIR, self.__NEXUSMODS_NAME)
+        self.thunderstore_dir = os.path.join(mods_dir, self.__MANIFESTS_DIR, self.__THUNDERSTORE_NAME)
+        self.nexusmods_dir = os.path.join(mods_dir, self.__MANIFESTS_DIR, self.__NEXUSMODS_NAME)
 
         if os.path.exists(self.cfg_filename):
             if os.path.isfile(self.cfg_filename) and os.access(self.cfg_filename, os.R_OK):
                 self.reload_cfg()
             else:
                 raise PermissionError("'{}' is not a file or cannot be read.".format(self.cfg_filename))
-        elif os.path.exists(install_dir):
-            cfg_file = open(self.cfg_filename, 'w')
-            cfg_file.write('mods:\n  ' + self.__THUNDERSTORE_NAME + ':\n\n  ' + self.__NEXUSMODS_NAME + ':\n')
-            cfg_file.close()
+        elif os.path.exists(mods_dir):
+            with open(self.cfg_filename, 'w') as cfg_file:
+                cfg_file.write('mods:\n  ' + self.__THUNDERSTORE_NAME + ':\n\n  ' + self.__NEXUSMODS_NAME + ':\n')
         else:
             raise FileNotFoundError("Cannot create or read '{}'.".format(self.cfg_filename))
 
@@ -37,9 +41,11 @@ class vapordmods:
                 os.makedirs(mod)
 
     def reload_cfg(self):
-        f = open(self.cfg_filename, "r")
-        self.cfg_data = yaml.safe_load(f)
-        f.close()
+        if os.path.exists(self.cfg_filename):
+            with open(self.cfg_filename, 'r') as cfg_file:
+                self.cfg_data = yaml.safe_load(cfg_file)
+        else:
+            raise "Erreur"
 
     async def refresh_mods_info(self, api_key: str = None):
         if self.cfg_data['mods']:
@@ -115,5 +121,47 @@ class vapordmods:
         else:
             raise ValueError("Erreur a faire")
 
+    def extract_mods(self, filename, mods_name):
+        filename = os.path.join(self.mods_dir, filename)
+        with zipfile.ZipFile(filename, 'r') as file:
+            try:
+                destination = os.path.join(self.mods_dir, mods_name)
+                file.extractall(destination)
+            except EOFError as er:
+                raise er
+
+    async def make_request(self, session, url, mods_name):
+        try:
+            resp = await session.request(method="GET", url=url)
+        except Exception as ex:
+            print(ex)
+            return
+
+        if resp.status == 200:
+            filename = os.path.join(self.mods_dir, resp.url.name)
+            async with aiofiles.open(filename, 'wb') as f:
+                await f.write(await resp.read())
+
+            async with aiofiles.open(filename, 'r') as f:
+                await asyncio.get_running_loop().run_in_executor(None, self.extract_mods, resp.url.name, mods_name)
+                os.remove(filename)
+
     async def update_mods(self):
-        pass
+        if type(self.mods_info) == dict:
+            if len(self.mods_info) > 0:
+                async with aiohttp.ClientSession() as session:
+                    for provider in self.mods_info:
+                        if provider not in (self.__THUNDERSTORE_NAME, self.__NEXUSMODS_NAME):
+                            break
+                        else:
+                            tasks = []
+                            for provider_k, provider_v in self.mods_info.items():
+                                for app_k, app_v in provider_v.items():
+                                    for mods_k, mods_v in app_v.items():
+                                        if mods_v['needupdate']:
+                                            tasks.append(self.make_request(session, mods_v['download_link'], mods_k))
+
+                            if len(tasks) > 0:
+                                await asyncio.gather(*tasks)
+        else:
+            raise "Error"
