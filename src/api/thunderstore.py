@@ -45,7 +45,6 @@ class thunderstore(BaseApi):
 
                 self.app = namespace
                 self.mods = name
-                self.mods_dir = mods_dir
                 self.download_url = self.__THUNDERSTORE_DOWNLOAD_LINK.format(download_url)
                 self.manifest = j
                 api_logger.info(

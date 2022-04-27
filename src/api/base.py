@@ -12,7 +12,7 @@ class BaseApi(ABC):
         self.manifest = None
 
     @abstractmethod
-    async def get_update(self, **kwargs):
+    async def get_update(self, **kwargs) -> int:
         pass
 
     def return_data(self):
