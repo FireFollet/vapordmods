@@ -1,3 +1,5 @@
 PyYAML
 aiohttp
 aiofiles
+pandas
+cerberus

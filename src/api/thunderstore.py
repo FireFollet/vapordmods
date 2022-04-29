@@ -36,17 +36,19 @@ class thunderstore(BaseApi):
                 j = await resp.json()
                 if not version:
                     self.version = j['latest']['version_number']
-                    self.dependencies = j['latest']['dependencies']
+                    self.description = j['latest']['description']
                     download_url = j['latest']['full_name'] + '.zip'
                 else:
                     self.version = j['version_number']
-                    self.dependencies = j['dependencies']
+                    self.description = j['description']
                     download_url = j['full_name'] + '.zip'
 
+                self.provider = 'thunderstore'
                 self.app = namespace
                 self.mods = name
+                self.full_mods_name = namespace + '-' + name
+
                 self.download_url = self.__THUNDERSTORE_DOWNLOAD_LINK.format(download_url)
-                self.manifest = j
                 api_logger.info(
                     f'The request from the "Thunderstore" API was successfull for the namespace {namespace} and the mod {name}')
                 return 0
