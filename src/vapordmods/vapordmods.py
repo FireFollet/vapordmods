@@ -70,7 +70,7 @@ class VapordMods:
 
     async def set_cfg_data(self):
         cfg_data = self.__load_yaml(self.cfg_filename)
-        async with aiofiles.open('./src/schema.py', 'r') as schema:
+        async with aiofiles.open('./src/schema', 'r') as schema:
             mods_validator = Validator(eval(await schema.read()))
 
         if not mods_validator.validate(cfg_data):
