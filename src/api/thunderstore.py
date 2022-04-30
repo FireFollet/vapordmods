@@ -15,13 +15,14 @@ class thunderstore(BaseApi):
     def __init__(self):
         super().__init__()
 
-    async def get_update(self, namespace: str, name: str, mods_dir: str, version: str = None) -> int:
+    async def get_update(self, namespace: str, name: str, mods_dir: str, version: str = None, api_key: str = None) -> int:
         """Get the mod update from Thunderstore API and return 0 if the request is successfull.
 
         :param str namespace: The namespace of the mod (Author)
         :param str name: The name of the mod (mod)
         :param str mods_dir: The directory where the mod need to be installed
         :param str version: If specified, get the requested version of the mod. Get the latest version if not specified (default None)
+        :param str api_key: Not required
         :return: Return 0 if the request is successfull else return 1
         :rtype: int
 
@@ -46,6 +47,7 @@ class thunderstore(BaseApi):
                 self.provider = 'thunderstore'
                 self.app = namespace
                 self.mods = name
+                self.mods_dir = mods_dir
                 self.full_mods_name = namespace + '-' + name
 
                 self.download_url = self.__THUNDERSTORE_DOWNLOAD_LINK.format(download_url)

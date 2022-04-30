@@ -6,9 +6,9 @@
             'default_mods_dir': {
                 'required': True,
                 'nullable': True,
-                'type': 'string'
-            }
-        }
+                'type': 'string',
+            },
+        },
     },
     'mods': {
         'required': True,
@@ -19,7 +19,7 @@
                 'provider': {
                     'required': True,
                     'type': 'string',
-                    'allowed': ['thunderstore', 'nexusmods', 'sworkshop']
+                    'allowed': ['thunderstore', 'nexusmods', 'sworkshop'],
                 },
                 'app': {
                     'required': True,
@@ -34,9 +34,9 @@
                 'mods_dir': {
                     'required': False,
                     'nullable': True,
-                    'type': 'string'
-                }
-            }
-        }
-    }
+                    'type': 'string',
+                },
+            },
+        },
+    },
 }
