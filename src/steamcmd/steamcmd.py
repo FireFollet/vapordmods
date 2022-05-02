@@ -9,7 +9,7 @@ from builtins import staticmethod
 class SteamCMD:
 
     def __init__(self, steamcmd_exec):
-        self.__steamcmd_running = False
+        self._steamcmd_running = False
 
         if os.path.exists(steamcmd_exec):
             if os.access(steamcmd_exec, os.X_OK):
@@ -45,7 +45,7 @@ class SteamCMD:
         return args
 
     async def __execute_steamcmd(self, steam_args: list):
-        if self.__steamcmd_running:
+        if self._steamcmd_running:
             logging.info(f"Cannot execute the function 'update_workshop_mods' beacause steamcmd is already running.")
             return 1
 
