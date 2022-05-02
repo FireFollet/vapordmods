@@ -19,7 +19,7 @@
                 'provider': {
                     'required': True,
                     'type': 'string',
-                    'allowed': ['thunderstore', 'nexusmods', 'sworkshop'],
+                    'allowed': ['thunderstore', 'nexusmods', 'workshop'],
                 },
                 'app': {
                     'required': True,
