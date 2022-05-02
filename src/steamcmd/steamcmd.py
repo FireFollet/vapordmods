@@ -1,12 +1,16 @@
+import logging
 import subprocess
 import os
 import re
+import asyncio
 from builtins import staticmethod
-#
+
 
 class SteamCMD:
 
     def __init__(self, steamcmd_exec):
+        self.__steamcmd_running = False
+
         if os.path.exists(steamcmd_exec):
             if os.access(steamcmd_exec, os.X_OK):
                 if os.path.basename(steamcmd_exec).lower().startswith('steamcmd'):
@@ -19,26 +23,50 @@ class SteamCMD:
             raise FileNotFoundError(f"The file '{steamcmd_exec}' is not found.")
 
     @staticmethod
-    def execute_cmd(args: list, timeout: int = 180):
+    def __execute_process(args: list, timeout: int = 180):
         proc = subprocess.run(args, capture_output=True, timeout=timeout)
         return proc
 
-    def update_workshop_mods(self, username: str, password: str, app_id: str, published_file_id, steam_guard_code: str = None):
+    def __build_base_args(self, username: str, password: str,  steam_guard_code: str = None):
         args = [
             self.steamcmd_exec,
             '+login',
-            username,
-            password,
-            '+workshop_download_item',
-            app_id,
-            published_file_id,
-            '+quit'
         ]
 
-        if steam_guard_code:
-            args.insert(3, steam_guard_code)
+        if username.lower() in ['', 'anonymous']:
+            args.append('anonymous')
+        else:
+            args.append(username)
+            args.append(password)
 
-        result = self.execute_cmd(args)
+        if steam_guard_code:
+            args.append(steam_guard_code)
+
+        return args
+
+    async def __execute_steamcmd(self, steam_args: list):
+        if self.__steamcmd_running:
+            logging.info(f"Cannot execute the function 'update_workshop_mods' beacause steamcmd is already running.")
+            return 1
+
+        try:
+            self.steamcmd_running = True
+            result = await asyncio.get_running_loop().run_in_executor(None, self.__execute_process, steam_args)
+        finally:
+            self.steamcmd_running = False
+
+        return result
+
+    async def update_workshop_mods(self, username: str, password: str, app_id: str, published_file_id: str, steam_guard_code: str = None):
+        args = self.__build_base_args(username, password, steam_guard_code)
+
+        args.append('+workshop_download_item')
+        args.append(app_id)
+        args.append(published_file_id)
+        args.append('+quit')
+
+        result = await self.__execute_steamcmd(args)
+
         if result.returncode == 0:
             regex = re.search('Success. Downloaded item.*"(.*)"', result.stdout.decode())
             if regex:

@@ -1,6 +1,6 @@
 import aiohttp
 import logging
-#
+
 from src.api.base import BaseApi
 
 api_logger = logging.getLogger(__name__)
@@ -8,9 +8,9 @@ api_logger = logging.getLogger(__name__)
 
 class thunderstore(BaseApi):
 
-    __THUNDERSTORE_API_URL_LATEST = 'https://thunderstore.io/api/experimental/package/{}/{}/'
-    __THUNDERSTORE_API_URL_VERSION = 'https://thunderstore.io/api/experimental/package/{}/{}/{}'
-    __THUNDERSTORE_DOWNLOAD_LINK = 'https://gcdn.thunderstore.io/live/repository/packages/{}'
+    _THUNDERSTORE_API_URL_LATEST = 'https://thunderstore.io/api/experimental/package/{}/{}/'
+    _THUNDERSTORE_API_URL_VERSION = 'https://thunderstore.io/api/experimental/package/{}/{}/{}'
+    _THUNDERSTORE_DOWNLOAD_LINK = 'https://gcdn.thunderstore.io/live/repository/packages/{}'
 
     def __init__(self):
         super().__init__()
@@ -30,9 +30,9 @@ class thunderstore(BaseApi):
 
         """
         if not version:
-            request = self.__THUNDERSTORE_API_URL_LATEST.format(namespace, name)
+            request = self._THUNDERSTORE_API_URL_LATEST.format(namespace, name)
         else:
-            request = self.__THUNDERSTORE_API_URL_VERSION.format(namespace, name, version)
+            request = self._THUNDERSTORE_API_URL_VERSION.format(namespace, name, version)
 
         async with aiohttp.request('GET', request) as resp:
             if resp.status == 200:
@@ -53,7 +53,7 @@ class thunderstore(BaseApi):
                 self.mods_dir = mods_dir
                 self.full_mods_name = namespace + '-' + name
 
-                self.download_url = self.__THUNDERSTORE_DOWNLOAD_LINK.format(download_url)
+                self.download_url = self._THUNDERSTORE_DOWNLOAD_LINK.format(download_url)
                 api_logger.info(
                     f'The request from the "Thunderstore" API was successfull for the namespace {namespace} and the mod {name}')
                 return 0

@@ -7,22 +7,28 @@ import logging
 import zipfile
 from cerberus import Validator
 import pandas as pd
+from src.steamcmd.steamcmd import SteamCMD
+from pathlib import Path
 from src.api import thunderstore, nexusmods
-#
+
 logger = logging.getLogger(__name__)
 
 
 class VapordMods:
-    __CFG_FILENAME = 'vapordmods.yml'
-    __MANIFESTS_FILENAME = 'vapordmods.manifests'
-    __THUNDERSTORE_NAME = 'thunderstore'
-    __NEXUSMODS_NAME = 'nexusmods'
-    __WORKSHOP_NAME = 'workshop'
+    _CFG_FILENAME = 'vapordmods.yml'
+    _MANIFESTS_FILENAME = 'vapordmods.manifests'
+    _THUNDERSTORE_NAME = 'thunderstore'
+    _NEXUSMODS_NAME = 'nexusmods'
+    _WORKSHOP_NAME = 'workshop'
 
-    def __init__(self, install_dir: str):
+    def __init__(self, install_dir: str, steamcmd_exec: str = None, steam_username: str = None, steam_password: str = None, steam_guard: str = None):
         self.install_dir = install_dir
-        self.manifests_filename = os.path.join(install_dir, self.__MANIFESTS_FILENAME)
-        self.cfg_filename = os.path.join(install_dir, self.__CFG_FILENAME)
+        self.steamcmd_exec = steamcmd_exec
+        self.steam_username = steam_username
+        self.steam_password = steam_password
+        self.steam_guard = steam_guard
+        self.manifests_filename = os.path.join(install_dir, self._MANIFESTS_FILENAME)
+        self.cfg_filename = os.path.join(install_dir, self._CFG_FILENAME)
         self.cfg_data = {}
         self.mods_info = {}
         self.mods_status = {}
@@ -49,7 +55,7 @@ class VapordMods:
             await cfg_file.write(template)
 
     @staticmethod
-    async def __load_yaml__(filename):
+    async def __load_yaml(filename):
         if os.path.exists(filename):
             with aiofiles.open(filename, 'r') as file:
                 return yaml.safe_load(await file.read())
@@ -57,7 +63,7 @@ class VapordMods:
             raise FileExistsError(filename)
 
     async def set_cfg_data(self):
-        cfg_data = await self.__load_yaml__(self.cfg_filename)
+        cfg_data = await self.__load_yaml(self.cfg_filename)
         async with aiofiles.open('./src/schema', 'r') as schema:
             mods_validator = Validator(eval(await schema.read()))
 
@@ -67,7 +73,7 @@ class VapordMods:
 
     async def set_mods_info(self):
         if os.path.exists(self.manifests_filename):
-            self.mods_info = await self.__load_yaml__(self.manifests_filename)
+            self.mods_info = await self.__load_yaml(self.manifests_filename)
 
     def get_mods_info(self):
         return self.mods_info
@@ -91,7 +97,7 @@ class VapordMods:
             # Requests mods update
             mods_update = []
             apicall = None
-            list_api_key = {self.__THUNDERSTORE_NAME: None, self.__NEXUSMODS_NAME: nmods_api_key, self.__WORKSHOP_NAME: steam_api_key}
+            list_api_key = {self._THUNDERSTORE_NAME: None, self._NEXUSMODS_NAME: nmods_api_key, self._WORKSHOP_NAME: steam_api_key}
             for idx, row in df_cfg.iterrows():
                 apicall = getattr(globals()[row['provider']], row['provider'])()
                 if await apicall.get_update(row['app'], row['mods'], row['mods_dir'], row['version'], list_api_key[row['provider']]) == 0:
@@ -115,7 +121,7 @@ class VapordMods:
             return 1
 
     @staticmethod
-    def __extract_mods__(filename, destination):
+    def __extract_mods(filename, destination):
         with zipfile.ZipFile(filename, 'r') as file:
             try:
                 file.extractall(destination)
@@ -124,7 +130,7 @@ class VapordMods:
                 logger.error(er)
                 return 1
 
-    async def __make_request__(self, session, row):
+    async def __make_request(self, session, row):
         try:
             resp = await session.request(method="GET", url=row['download_url'])
 
@@ -137,7 +143,7 @@ class VapordMods:
                 async with aiofiles.open(filename, 'wb') as f:
                     await f.write(await resp.read())
 
-                if await asyncio.get_running_loop().run_in_executor(None, self.__extract_mods__, filename, destination) == 0:
+                if await asyncio.get_running_loop().run_in_executor(None, self.__extract_mods, filename, destination) == 0:
                     os.remove(filename)
             else:
                 logger.error(f"Error with the request: {resp.status} {resp.text()}")
@@ -151,16 +157,33 @@ class VapordMods:
             return 1
 
         try:
-            list_to_update = pd.DataFrame.from_dict(self.mods_status).query('need_update == True')
+            list_to_update = pd.DataFrame.from_dict(self.mods_status).query(f"need_update == True & provider in "
+                                                                            f"['{self._THUNDERSTORE_NAME}',"
+                                                                            f"'{self._NEXUSMODS_NAME}']")
             if list_to_update is not None:
                 async with aiohttp.ClientSession() as session:
                     tasks = []
-                    for idx, rows in list_to_update.iterrows():
-                        tasks.append(self.__make_request__(session, rows))
+                    for idx, row in list_to_update.iterrows():
+                        tasks.append(self.__make_request(session, row))
 
                     await asyncio.gather(*tasks)
-                with open(self.manifests_filename, 'w') as manifest:
-                    yaml.safe_dump(self.mods_status, manifest)
+
+            list_to_update_workshop = pd.DataFrame.from_dict(self.mods_status).query(f"need_update == True & provider "
+                                                                                     f"= '{self._WORKSHOP_NAME}'")
+            if list_to_update_workshop is not None:
+                steam_update = SteamCMD(self.steamcmd_exec)
+                for idx, row in list_to_update_workshop.iterrows():
+                    result = await steam_update.update_workshop_mods(self.steam_username, self.steam_password, row['app'], row['mods'], self.steam_guard)
+                    if result == 0 and result(1):
+                        Path(result(1)).symlink_to(os.path.join(row['mods_dir'], row['title']))
+                    elif result == 0:
+                        logger.error(f"The symlink for the APP_ID {row['app']} and published_file_id {row['mods']} was note created.")
+                    else:
+                        logger.error(result(1))
+
+            with open(self.manifests_filename, 'w') as manifest:
+                yaml.safe_dump(self.mods_status, manifest)
+
             return 0
         except Exception as er:
             logger.error(er)

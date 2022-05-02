@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 
-#
+
 class BaseApi(ABC):
 
     def __init__(self):

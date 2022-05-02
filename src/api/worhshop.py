@@ -1,6 +1,6 @@
 import aiohttp
 import logging
-#
+
 from src.api.base import BaseApi
 
 api_logger = logging.getLogger(__name__)
@@ -8,7 +8,7 @@ api_logger = logging.getLogger(__name__)
 
 class workshop(BaseApi):
 
-    __WORKSHOP_API_LATEST_INFO = 'https://api.steampowered.com/IPublishedFileService/GetDetails/v1/?key={}&publishedfileids%5B0%5D={}&includemetadata=true&appid={}'
+    _WORKSHOP_API_LATEST_INFO = 'https://api.steampowered.com/IPublishedFileService/GetDetails/v1/?key={}&publishedfileids%5B0%5D={}&includemetadata=true&appid={}'
 
     def __init__(self):
         super().__init__()
@@ -30,7 +30,7 @@ class workshop(BaseApi):
             api_logger.error(f'{app_id}-{published_file_id}: The steam_api_key is null or empty and cannot get an '
                              f'update for the mod. Please provide a valid api key.')
         else:
-            request = self.__WORKSHOP_API_LATEST_INFO.format(api_key, published_file_id, app_id)
+            request = self._WORKSHOP_API_LATEST_INFO.format(api_key, published_file_id, app_id)
             api_logger.debug(f"Start API request: {request.replace(api_key, '<removed_key>')}")
             async with aiohttp.request('GET', request) as resp:
                 if resp.status == 200:

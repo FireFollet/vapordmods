@@ -1,20 +1,20 @@
 import aiohttp
 import logging
-#
+
 from src.api.base import BaseApi
 
 api_logger = logging.getLogger(__name__)
 
 
 class nexusmods(BaseApi):
-    __NEXUSMODS_API_URL_FILES = "https://api.nexusmods.com/v1/games/{}/mods/{}/files.json"
-    __NEXUSMODS_API_URL_DOWNLOAD_LINK = "https://api.nexusmods.com/v1/games/{}/mods/{}/files/{}/download_link.json"
+    _NEXUSMODS_API_URL_FILES = "https://api.nexusmods.com/v1/games/{}/mods/{}/files.json"
+    _NEXUSMODS_API_URL_DOWNLOAD_LINK = "https://api.nexusmods.com/v1/games/{}/mods/{}/files/{}/download_link.json"
 
     def __init__(self):
         super().__init__()
 
     @staticmethod
-    def __get_file_data__(version, response):
+    def __get_file_data(version, response):
         filedata = {}
         if not version:
             filedata = response['files'][len(response['files']) - 1]
@@ -32,7 +32,7 @@ class nexusmods(BaseApi):
                              f'update for the mod. Please provide a valid api key.')
             return 1
         else:
-            request = self.__NEXUSMODS_API_URL_FILES.format(game_domain_name, mod_id)
+            request = self._NEXUSMODS_API_URL_FILES.format(game_domain_name, mod_id)
             headers = {
                 "accept": "application/json",
                 "apikey": api_key
@@ -42,12 +42,12 @@ class nexusmods(BaseApi):
                 if resp.status == 200:
                     j = await resp.json()
 
-                    filedata = self.__get_file_data__(version, j)
+                    filedata = self.__get_file_data(version, j)
                     if filedata is None:
                         api_logger.error(
                             f"status': {resp.status}, 'data': The version '{version}' was not found in the game domain '{game_domain_name}' for the mod '{mod_id}'.")
 
-                    req_dl = self.__NEXUSMODS_API_URL_DOWNLOAD_LINK.format(game_domain_name, mod_id, str(filedata['file_id']))
+                    req_dl = self._NEXUSMODS_API_URL_DOWNLOAD_LINK.format(game_domain_name, mod_id, str(filedata['file_id']))
                     async with aiohttp.request('GET', req_dl, headers=headers) as resp_dl:
                         if resp_dl.status == 200:
                             dl = await resp_dl.json()
