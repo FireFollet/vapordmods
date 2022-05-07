@@ -7,9 +7,9 @@ import logging
 import zipfile
 from cerberus import Validator
 import pandas as pd
-from src.steamcmd.steamcmd import SteamCMD
+from steamcmd.steamcmd import SteamCMD
 from pathlib import Path
-from src.api import thunderstore, nexusmods
+from api import thunderstore, nexusmods
 
 logger = logging.getLogger(__name__)
 
@@ -57,7 +57,7 @@ class VapordMods:
     @staticmethod
     async def __load_yaml(filename):
         if os.path.exists(filename):
-            with aiofiles.open(filename, 'r') as file:
+            async with aiofiles.open(filename, 'r') as file:
                 return yaml.safe_load(await file.read())
         else:
             raise FileExistsError(filename)

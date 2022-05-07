@@ -1,5 +1,6 @@
-PyYAML
-aiohttp
-aiofiles
-pandas
-cerberus
+PyYAML~=6.0
+aiohttp~=3.8.1
+aiofiles~=0.8.0
+pandas~=1.4.2
+cerberus~=1.3.4
+setuptools~=60.2.0

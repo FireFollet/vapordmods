@@ -9,7 +9,7 @@ from builtins import staticmethod
 class SteamCMD:
 
     def __init__(self, steamcmd_exec):
-        self._steamcmd_running = False
+        self.steamcmd_running = False
 
         if os.path.exists(steamcmd_exec):
             if os.access(steamcmd_exec, os.X_OK):
@@ -27,7 +27,7 @@ class SteamCMD:
         proc = subprocess.run(args, capture_output=True, timeout=timeout)
         return proc
 
-    def __build_base_args(self, username: str, password: str,  steam_guard_code: str = None):
+    def build_base_args(self, username: str, password: str,  steam_guard_code: str = None):
         args = [
             self.steamcmd_exec,
             '+login',
@@ -44,8 +44,8 @@ class SteamCMD:
 
         return args
 
-    async def __execute_steamcmd(self, steam_args: list):
-        if self._steamcmd_running:
+    async def execute_steamcmd(self, steam_args: list):
+        if self.steamcmd_running:
             logging.info(f"Cannot execute the function 'update_workshop_mods' beacause steamcmd is already running.")
             return 1
 
@@ -58,14 +58,14 @@ class SteamCMD:
         return result
 
     async def update_workshop_mods(self, username: str, password: str, app_id: str, published_file_id: str, steam_guard_code: str = None):
-        args = self.__build_base_args(username, password, steam_guard_code)
+        args = self.build_base_args(username, password, steam_guard_code)
 
         args.append('+workshop_download_item')
         args.append(app_id)
         args.append(published_file_id)
         args.append('+quit')
 
-        result = await self.__execute_steamcmd(args)
+        result = await self.execute_steamcmd(args)
 
         if result.returncode == 0:
             regex = re.search('Success. Downloaded item.*"(.*)"', result.stdout.decode())
