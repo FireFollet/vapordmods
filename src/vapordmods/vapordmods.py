@@ -5,6 +5,10 @@ import aiohttp
 import yaml
 import logging
 import zipfile
+try:
+    from importlib import resources
+except ImportError:
+    import importlib_resources as resources
 from cerberus import Validator
 import pandas as pd
 from steamcmd.steamcmd import SteamCMD
@@ -64,8 +68,8 @@ class VapordMods:
 
     async def set_cfg_data(self):
         cfg_data = await self.__load_yaml(self.cfg_filename)
-        async with aiofiles.open('./src/schema', 'r') as schema:
-            mods_validator = Validator(eval(await schema.read()))
+        schema = resources.read_text('vapordmods', 'schema')
+        mods_validator = Validator(eval(schema))
 
         if not mods_validator.validate(cfg_data):
             raise KeyError(mods_validator.errors)
