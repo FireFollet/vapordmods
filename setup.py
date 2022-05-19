@@ -3,9 +3,6 @@ import setuptools
 with open('README.md', 'r', encoding='utf-8') as fh:
     long_description = fh.read()
 
-with open('requirements.txt', 'r', encoding='utf-8') as f:
-    requirements = f.read().splitlines()
-
 setuptools.setup(
     name='vapordmods',
     version='0.1.1',
@@ -19,7 +16,11 @@ setuptools.setup(
         "Bug Tracker": "https://github.com/FireFollet/vapordmods/issues",
     },
     package_dir={"": "src"},
-    install_requires=requirements,
+    install_requires=['PyYAML~=6.0',
+                      'aiohttp~=3.8.1',
+                      'aiofiles~=0.8.0',
+                      'pandas~=1.4.2',
+                      'cerberus~=1.3.4'],
     packages=setuptools.find_packages(where="src"),
     python_requires=">=3.8",
     license='MIT',
