@@ -21,7 +21,7 @@ setuptools.setup(
     package_dir={"": "src"},
     install_requirements=requirements,
     packages=setuptools.find_packages(where="src"),
-    python_requires=">=3.7",
+    python_requires=">=3.8",
     license='MIT',
     classifiers=[
         'Development Status :: 3 - Alpha',
