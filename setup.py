@@ -1,11 +1,14 @@
 import setuptools
 
-with open("README.md", "r", encoding="utf-8") as fh:
+with open('README.md', 'r', encoding='utf-8') as fh:
     long_description = fh.read()
+
+with open('requirements.txt', 'r', encoding='utf-8') as f:
+    requirements = f.read().splitlines()
 
 setuptools.setup(
     name='vapordmods',
-    version='0.1.0',
+    version='0.1.1',
     author='FireFollet',
     author_email='',
     description='Manage multiples mods provider like Thunderstore, Nexismods and Steam Workshop.',
@@ -16,6 +19,7 @@ setuptools.setup(
         "Bug Tracker": "https://github.com/FireFollet/vapordmods/issues",
     },
     package_dir={"": "src"},
+    install_requirements=requirements,
     packages=setuptools.find_packages(where="src"),
     python_requires=">=3.7",
     license='MIT',
