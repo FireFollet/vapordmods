@@ -5,7 +5,7 @@ with open('README.md', 'r', encoding='utf-8') as fh:
 
 setuptools.setup(
     name='vapordmods',
-    version='0.1.7',
+    version='0.1.8',
     author='FireFollet',
     author_email='',
     description='Manage multiples mods provider like Thunderstore, Nexismods and Steam Workshop.',

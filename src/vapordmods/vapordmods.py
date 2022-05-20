@@ -6,11 +6,12 @@ import yaml
 import logging
 import zipfile
 import pandas as pd
-from ..vapordmods.schema import schema
 from cerberus import Validator
-from ..steamcmd.steamcmd import SteamCMD
 from pathlib import Path
-from ..api import thunderstore, nexusmods
+from ..api import worhshop, thunderstore, nexusmods
+from ..vapordmods.schema import schema
+from ..steamcmd.steamcmd import SteamCMD
+
 
 logger = logging.getLogger(__name__)
 
