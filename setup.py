@@ -1,9 +1,9 @@
-import setuptools
+from setuptools import setup, find_packages
 
 with open('README.md', 'r', encoding='utf-8') as fh:
     long_description = fh.read()
 
-setuptools.setup(
+setup(
     name='vapordmods',
     version='0.1.10',
     author='FireFollet',
@@ -21,7 +21,7 @@ setuptools.setup(
                       'aiofiles~=0.8.0',
                       'pandas~=1.4.2',
                       'cerberus~=1.3.4'],
-    packages=setuptools.find_packages(),
+    packages=['vapordmods'] + ['vapordmods.'+x for x in find_packages(where='vapordmods')],
     python_requires=">=3.8",
     license='MIT',
     classifiers=[
