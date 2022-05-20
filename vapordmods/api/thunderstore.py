@@ -3,7 +3,7 @@ import logging
 
 from ..api.base import BaseApi
 
-api_logger = logging.getLogger(__name__)
+from vapordmods.api.base import BaseApi
 
 
 class thunderstore(BaseApi):
