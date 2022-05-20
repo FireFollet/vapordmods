@@ -5,9 +5,9 @@ import aiohttp
 import yaml
 import logging
 import zipfile
-from src.vapordmods.schema import schema
-from cerberus import Validator
 import pandas as pd
+from ..vapordmods.schema import schema
+from cerberus import Validator
 from ..steamcmd.steamcmd import SteamCMD
 from pathlib import Path
 from ..api import thunderstore, nexusmods
