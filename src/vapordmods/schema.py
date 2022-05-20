@@ -1,4 +1,4 @@
-{
+schema = {
     'config': {
         'required': True,
         'type': 'dict',

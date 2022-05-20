@@ -1,7 +1,7 @@
 import aiohttp
 import logging
 
-from api.base import BaseApi
+from ..api.base import BaseApi
 
 api_logger = logging.getLogger(__name__)
 

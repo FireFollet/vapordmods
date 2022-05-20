@@ -1,7 +1,7 @@
 import aiohttp
 import logging
 
-from api.base import BaseApi
+from ..api.base import BaseApi
 
 api_logger = logging.getLogger(__name__)
 
@@ -58,5 +58,5 @@ class thunderstore(BaseApi):
                     f'The request from the "Thunderstore" API was successfull for the namespace {namespace} and the mod {name}')
                 return 0
             else:
-                api_logger.error(f'{namespace}-{name}: Status {resp.status}, Error: {resp.text()}')
+                api_logger.error(f'{namespace}-{name}: Status {resp.status}, Error: {await resp.text()}')
                 return 1

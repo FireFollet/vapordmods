@@ -5,15 +5,12 @@ import aiohttp
 import yaml
 import logging
 import zipfile
-try:
-    from importlib import resources
-except ImportError:
-    import importlib_resources as resources
+from src.vapordmods.schema import schema
 from cerberus import Validator
 import pandas as pd
-from steamcmd.steamcmd import SteamCMD
+from ..steamcmd.steamcmd import SteamCMD
 from pathlib import Path
-from api import thunderstore, nexusmods
+from ..api import thunderstore, nexusmods
 
 logger = logging.getLogger(__name__)
 
@@ -37,20 +34,19 @@ class VapordMods:
         self.mods_info = {}
         self.mods_status = {}
 
-        asyncio.run(self.set_cfg_data())
+        try:
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
+            loop = asyncio.new_event_loop()
 
-        if self.cfg_data['config']['default_mods_dir']:
-            self.default_mods_dir = self.cfg_data['config']['default_mods_dir']
-        else:
-            self.default_mods_dir = install_dir
+        if not os.path.exists(self.install_dir):
+            raise NotADirectoryError("The installdir {self.install_dir} doesn't exist.")
+
+        if not os.path.exists(self.cfg_filename) and not os.access(self.install_dir, os.W_OK):
+            raise PermissionError(f"Cannot write to the folder {self.install_dir }.")
 
         if not os.path.exists(self.cfg_filename):
-            raise PermissionError(f"Cannot create or read '{self.cfg_filename}'.")
-
-        if not (os.path.isfile(self.cfg_filename) and os.access(self.cfg_filename, os.R_OK)):
-            raise PermissionError(f"'{self.cfg_filename}' is not a file or cannot be read.")
-        elif os.path.exists(install_dir):
-            asyncio.run(self.write_cfg_filename())
+            loop.run_until_complete(self.write_cfg_filename())
 
     async def write_cfg_filename(self):
         template = b'config:\n  default_mods_dir: \n\nmods:\n  - provider: \n    app: \n    mods: \n    version: \n' \
@@ -66,16 +62,20 @@ class VapordMods:
         else:
             raise FileExistsError(filename)
 
-    async def set_cfg_data(self):
+    async def load_cfg_data(self):
         cfg_data = await self.__load_yaml(self.cfg_filename)
-        schema = resources.read_text('vapordmods', 'schema')
-        mods_validator = Validator(eval(schema))
+        mods_validator = Validator(schema)
 
         if not mods_validator.validate(cfg_data):
             raise KeyError(mods_validator.errors)
         self.cfg_data = cfg_data
 
-    async def set_mods_info(self):
+        if self.cfg_data['config']['default_mods_dir']:
+            self.default_mods_dir = self.cfg_data['config']['default_mods_dir']
+        else:
+            self.default_mods_dir = self.install_dir
+
+    async def load_mods_info(self):
         if os.path.exists(self.manifests_filename):
             self.mods_info = await self.__load_yaml(self.manifests_filename)
 
@@ -88,8 +88,8 @@ class VapordMods:
     async def refresh_mods_info(self, nmods_api_key: str = None, steam_api_key: str = None):
         try:
             suffixes = '_current'
-            await self.set_cfg_data()
-            await self.set_mods_info()
+            await self.load_cfg_data()
+            await self.load_mods_info()
 
             df_cfg = pd.DataFrame.from_dict(self.cfg_data['mods'])
             for col in ['version', 'mods_dir']:
@@ -97,6 +97,7 @@ class VapordMods:
                     df_cfg[col] = ''
 
             df_cfg.loc[((df_cfg['mods_dir'] == '') | (df_cfg['mods_dir'] is None)), 'mods_dir'] = self.default_mods_dir
+            df_cfg = df_cfg.fillna('')
 
             # Requests mods update
             mods_update = []
@@ -113,10 +114,10 @@ class VapordMods:
             if len(self.mods_info) > 0:
                 df_current = pd.DataFrame(self.mods_info)
                 df_status = df_update.merge(df_current, on=['provider', 'app', 'mods'], suffixes=(None, suffixes))
+                df_status['need_update'] = df_status['version'] != df_status[f'version{suffixes}']
             else:
                 df_status = df_update
-
-            df_status['need_update'] = df_status['version'] != df_status[f'version{suffixes}']
+                df_status['need_update'] = True
 
             self.mods_status = df_status.filter(items=df_update.columns.to_list()).to_dict()
             return 0
@@ -164,7 +165,7 @@ class VapordMods:
             list_to_update = pd.DataFrame.from_dict(self.mods_status).query(f"need_update == True & provider in "
                                                                             f"['{self._THUNDERSTORE_NAME}',"
                                                                             f"'{self._NEXUSMODS_NAME}']")
-            if list_to_update is not None:
+            if not list_to_update.empty:
                 async with aiohttp.ClientSession() as session:
                     tasks = []
                     for idx, row in list_to_update.iterrows():
@@ -172,9 +173,9 @@ class VapordMods:
 
                     await asyncio.gather(*tasks)
 
-            list_to_update_workshop = pd.DataFrame.from_dict(self.mods_status).query(f"need_update == True & provider "
-                                                                                     f"= '{self._WORKSHOP_NAME}'")
-            if list_to_update_workshop is not None:
+            list_to_update_workshop = pd.DataFrame.from_dict(self.mods_status).query(f"need_update == True & "
+                                                                                     f"provider == '{self._WORKSHOP_NAME}'")
+            if not list_to_update_workshop.empty:
                 steam_update = SteamCMD(self.steamcmd_exec)
                 for idx, row in list_to_update_workshop.iterrows():
                     result = await steam_update.update_workshop_mods(self.steam_username, self.steam_password, row['app'], row['mods'], self.steam_guard)
