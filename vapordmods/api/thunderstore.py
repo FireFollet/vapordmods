@@ -1,9 +1,8 @@
 import aiohttp
 import logging
-
-from ..api.base import BaseApi
-
 from vapordmods.api.base import BaseApi
+
+api_logger = logging.getLogger(__name__)
 
 
 class thunderstore(BaseApi):
