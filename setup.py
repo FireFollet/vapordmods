@@ -21,7 +21,7 @@ setuptools.setup(
                       'aiofiles~=0.8.0',
                       'pandas~=1.4.2',
                       'cerberus~=1.3.4'],
-    packages=setuptools.find_packages(),
+    packages=setuptools.find_packages(where='vapordmods'),
     python_requires=">=3.8",
     license='MIT',
     classifiers=[
