@@ -4,7 +4,7 @@ with open('README.md', 'r', encoding='utf-8') as fh:
     long_description = fh.read()
 
 setup(
-    name='vapordmods',
+    name='src',
     version='0.1.10a3',
     author='FireFollet',
     author_email='',
@@ -15,13 +15,13 @@ setup(
     project_urls={
         "Bug Tracker": "https://github.com/FireFollet/vapordmods/issues",
     },
-    package_dir={"": "vapordmods"},
+    package_dir={"": "src"},
+    packages=find_packages(where='src'),
     install_requires=['PyYAML~=6.0',
                       'aiohttp~=3.8.1',
                       'aiofiles~=0.8.0',
                       'pandas~=1.4.2',
                       'cerberus~=1.3.4'],
-    #  packages=find_packages(include=['vapordmods.*']),
     python_requires=">=3.8",
     license='MIT',
     classifiers=[

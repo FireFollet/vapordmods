@@ -1,7 +1,7 @@
 import aiohttp
 import logging
 
-from vapordmods.api.base import BaseApi
+from src.api.base import BaseApi
 
 api_logger = logging.getLogger(__name__)
 
