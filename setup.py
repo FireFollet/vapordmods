@@ -15,7 +15,7 @@ setup(
     project_urls={
         "Bug Tracker": "https://github.com/FireFollet/vapordmods/issues",
     },
-    package_dir={"": "vapordmods"},
+    #  package_dir={"": "vapordmods"},
     install_requires=['PyYAML~=6.0',
                       'aiohttp~=3.8.1',
                       'aiofiles~=0.8.0',
