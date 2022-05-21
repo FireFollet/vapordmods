@@ -5,7 +5,7 @@ with open('README.md', 'r', encoding='utf-8') as fh:
 
 setup(
     name='vapordmods',
-    version='0.1.10',
+    version='0.1.10a1',
     author='FireFollet',
     author_email='',
     description='Manage multiples mods provider like Thunderstore, Nexismods and Steam Workshop.',
@@ -21,7 +21,7 @@ setup(
                       'aiofiles~=0.8.0',
                       'pandas~=1.4.2',
                       'cerberus~=1.3.4'],
-    packages=['vapordmods'] + ['vapordmods.'+x for x in find_packages(where='vapordmods')],
+    packages=find_packages(include=['vapordmods', 'vapordmods.*']),
     python_requires=">=3.8",
     license='MIT',
     classifiers=[
