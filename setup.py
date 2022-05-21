@@ -4,7 +4,7 @@ with open('README.md', 'r', encoding='utf-8') as fh:
     long_description = fh.read()
 
 setup(
-    name='src',
+    name='vapordmods',
     version='0.1.10a3',
     author='FireFollet',
     author_email='',
