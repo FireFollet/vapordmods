@@ -5,7 +5,7 @@ with open('README.md', 'r', encoding='utf-8') as fh:
 
 setup(
     name='vapordmods',
-    version='0.1.10a3',
+    version='0.2.1a1',
     author='FireFollet',
     author_email='',
     description='Manage multiples mods provider like Thunderstore, Nexismods and Steam Workshop.',
@@ -15,8 +15,7 @@ setup(
     project_urls={
         "Bug Tracker": "https://github.com/FireFollet/vapordmods/issues",
     },
-    package_dir={"": "src"},
-    packages=find_packages(where='src'),
+    packages=['vapordmods'] + ['vapordmods.'+x for x in find_packages(where='vapordmods')],
     install_requires=['PyYAML~=6.0',
                       'aiohttp~=3.8.1',
                       'aiofiles~=0.8.0',

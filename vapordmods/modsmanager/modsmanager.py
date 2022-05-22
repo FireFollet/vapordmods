@@ -8,17 +8,17 @@ import zipfile
 import pandas as pd
 from cerberus import Validator
 from pathlib import Path
-from src.api import worhshop, thunderstore, nexusmods
-from src.vapordmods.schema import schema
-from src.steamcmd.steamcmd import SteamCMD
+from vapordmods.api import worhshop, thunderstore, nexusmods
+from vapordmods.modsmanager.schema import schema
+from vapordmods.steamcmd.steamcmd import SteamCMD
 
 
 logger = logging.getLogger(__name__)
 
 
 class VapordMods:
-    _CFG_FILENAME = 'src.yml'
-    _MANIFESTS_FILENAME = 'src.manifests'
+    _CFG_FILENAME = 'vapordmods.yml'
+    _MANIFESTS_FILENAME = 'vapordmods.manifests'
     _THUNDERSTORE_NAME = 'thunderstore'
     _NEXUSMODS_NAME = 'nexusmods'
     _WORKSHOP_NAME = 'workshop'
