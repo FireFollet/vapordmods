@@ -13,10 +13,10 @@ class SteamCMD:
 
         if os.path.exists(steamcmd_exec):
             if os.access(steamcmd_exec, os.X_OK):
-                if os.path.basename(steamcmd_exec).lower().startswith('steamcmd'):
+                if os.path.basename(steamcmd_exec).lower().startswith('tools'):
                     self.steamcmd_exec = steamcmd_exec
                 else:
-                    raise FileNotFoundError(f"The file '{steamcmd_exec}' doesn't seems to be a steamcmd execution file.")
+                    raise FileNotFoundError(f"The file '{steamcmd_exec}' doesn't seems to be a tools execution file.")
             else:
                 raise PermissionError(f"The current user cannot execute the file '{steamcmd_exec}'.")
         else:
@@ -46,7 +46,7 @@ class SteamCMD:
 
     async def execute_steamcmd(self, steam_args: list):
         if self.steamcmd_running:
-            logging.info(f"Cannot execute the function 'update_workshop_mods' beacause steamcmd is already running.")
+            logging.info(f"Cannot execute the function 'update_workshop_mods' beacause tools is already running.")
             return 1
 
         try:

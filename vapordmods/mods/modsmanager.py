@@ -9,14 +9,14 @@ import pandas as pd
 from cerberus import Validator
 from pathlib import Path
 from vapordmods.api import worhshop, thunderstore, nexusmods
-from vapordmods.modsmanager.schema import schema
-from vapordmods.steamcmd.steamcmd import SteamCMD
+from vapordmods.mods.schema import schema
+from vapordmods.tools.steamcmd import SteamCMD
 
 
 logger = logging.getLogger(__name__)
 
 
-class VapordMods:
+class ModsManager:
     _CFG_FILENAME = 'vapordmods.yml'
     _MANIFESTS_FILENAME = 'vapordmods.manifests'
     _THUNDERSTORE_NAME = 'thunderstore'
