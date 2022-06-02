@@ -10,7 +10,7 @@ from cerberus import Validator
 from pathlib import Path
 from vapordmods.api import worhshop, thunderstore, nexusmods
 from vapordmods.mods.schema import schema
-from vapordmods.tools.steamcmd import SteamCMD
+from vapordmods.tools.steamcmd import SteamManager
 
 
 logger = logging.getLogger(__name__)
@@ -23,12 +23,19 @@ class ModsManager:
     _NEXUSMODS_NAME = 'nexusmods'
     _WORKSHOP_NAME = 'workshop'
 
-    def __init__(self, install_dir: str, steamcmd_exec: str = None, steam_username: str = None, steam_password: str = None, steam_guard: str = None):
+    def __init__(self, install_dir: str,
+                 web_api_key: str,
+                 steamcmd_exec: str = None,
+                 steam_username: str = None,
+                 steam_password: str = None,
+                 steam_guard: str = None,
+                 two_factor_code: str = None):
         self.install_dir = install_dir
-        self.steamcmd_exec = steamcmd_exec
+        self.web_api_key = web_api_key
         self.steam_username = steam_username
         self.steam_password = steam_password
         self.steam_guard = steam_guard
+        self.two_factor_code = two_factor_code
         self.manifests_filename = os.path.join(install_dir, self._MANIFESTS_FILENAME)
         self.cfg_filename = os.path.join(install_dir, self._CFG_FILENAME)
         self.cfg_data = {}
@@ -41,7 +48,7 @@ class ModsManager:
             loop = asyncio.new_event_loop()
 
         if not os.path.exists(self.install_dir):
-            raise NotADirectoryError("The installdir {self.install_dir} doesn't exist.")
+            raise NotADirectoryError(f"The installdir {self.install_dir} doesn't exist.")
 
         if not os.path.exists(self.cfg_filename) and not os.access(self.install_dir, os.W_OK):
             raise PermissionError(f"Cannot write to the folder {self.install_dir }.")
@@ -177,9 +184,14 @@ class ModsManager:
             list_to_update_workshop = pd.DataFrame.from_dict(self.mods_status).query(f"need_update == True & "
                                                                                      f"provider == '{self._WORKSHOP_NAME}'")
             if not list_to_update_workshop.empty:
-                steam_update = SteamCMD(self.steamcmd_exec)
+                steam_update = SteamManager(self.web_api_key,
+                                            self.steam_username,
+                                            self.steam_password,
+                                            self.steam_guard,
+                                            self.two_factor_code
+                                            )
                 for idx, row in list_to_update_workshop.iterrows():
-                    result = await steam_update.update_workshop_mods(self.steam_username, self.steam_password, row['app'], row['mods'], self.steam_guard)
+                    result = await steam_update.update_worksop_mod(row['app'], row['mods'])
                     if result == 0 and result(1):
                         Path(result(1)).symlink_to(os.path.join(row['mods_dir'], row['title']))
                     elif result == 0:
