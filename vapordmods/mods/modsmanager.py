@@ -1,5 +1,8 @@
+import steam.monkey
+steam.monkey.patch_minimal()
 import asyncio
 import aiofiles
+import aiofiles.os
 import os
 import aiohttp
 import yaml
@@ -24,8 +27,7 @@ class ModsManager:
     _WORKSHOP_NAME = 'workshop'
 
     def __init__(self, install_dir: str,
-                 web_api_key: str,
-                 steamcmd_exec: str = None,
+                 web_api_key: str = None,
                  steam_username: str = None,
                  steam_password: str = None,
                  steam_guard: str = None,
@@ -97,6 +99,7 @@ class ModsManager:
         try:
             suffixes = '_current'
             await self.load_cfg_data()
+            self.mods_info = {}
             await self.load_mods_info()
 
             df_cfg = pd.DataFrame.from_dict(self.cfg_data['mods'])
@@ -128,36 +131,36 @@ class ModsManager:
                 df_status['need_update'] = True
 
             self.mods_status = df_status.filter(items=df_update.columns.to_list()).to_dict()
-            return 0
+            return 1
         except Exception as er:
             logger.error(f"Error during update for mods: {er}")
-            return 1
+            return 0
 
     @staticmethod
-    def __extract_mods(filename, destination):
+    async def __extract_mods(filename, destination):
         with zipfile.ZipFile(filename, 'r') as file:
             try:
                 file.extractall(destination)
-                return 0
+                return 1
             except Exception as er:
                 logger.error(er)
-                return 1
+                return 0
 
     async def __make_request(self, session, row):
         try:
             resp = await session.request(method="GET", url=row['download_url'])
 
             if resp.status == 200:
-                if not os.path.exists(row['mods_dir']):
-                    os.makedirs(row['mods_dir'], exist_ok=True)
+                if not await aiofiles.os.path.exists(row['mods_dir']):
+                    await aiofiles.os.makedirs(row['mods_dir'], exist_ok=True)
 
                 filename = os.path.join(row['mods_dir'], resp.url.name)
                 destination = os.path.join(row['mods_dir'], row['full_mods_name'])
                 async with aiofiles.open(filename, 'wb') as f:
                     await f.write(await resp.read())
 
-                if await asyncio.get_running_loop().run_in_executor(None, self.__extract_mods, filename, destination) == 0:
-                    os.remove(filename)
+                if await self.__extract_mods(filename, destination) == 1:
+                    await aiofiles.os.remove(filename)
             else:
                 logger.error(f"Error with the request: {resp.status} {resp.text()}")
 
@@ -167,7 +170,7 @@ class ModsManager:
     async def update_mods(self):
         if len(self.mods_status) == 0:
             logger.error(f"No mods information. Please execute the method 'refresh_mods_info'.")
-            return 1
+            return 0
 
         try:
             list_to_update = pd.DataFrame.from_dict(self.mods_status).query(f"need_update == True & provider in "
@@ -184,17 +187,17 @@ class ModsManager:
             list_to_update_workshop = pd.DataFrame.from_dict(self.mods_status).query(f"need_update == True & "
                                                                                      f"provider == '{self._WORKSHOP_NAME}'")
             if not list_to_update_workshop.empty:
-                steam_update = SteamManager(self.web_api_key,
-                                            self.steam_username,
-                                            self.steam_password,
-                                            self.steam_guard,
-                                            self.two_factor_code
+                steam_update = SteamManager(web_api_key=self.web_api_key,
+                                            username=self.steam_username,
+                                            password=self.steam_password,
+                                            steam_guard_code=self.steam_guard,
+                                            two_factor_code=self.two_factor_code
                                             )
                 for idx, row in list_to_update_workshop.iterrows():
                     result = await steam_update.update_worksop_mod(row['app'], row['mods'])
-                    if result == 0 and result(1):
+                    if result == 1 and result(1):
                         Path(result(1)).symlink_to(os.path.join(row['mods_dir'], row['title']))
-                    elif result == 0:
+                    elif result == 1:
                         logger.error(f"The symlink for the APP_ID {row['app']} and published_file_id {row['mods']} was note created.")
                     else:
                         logger.error(result(1))
@@ -202,7 +205,7 @@ class ModsManager:
             with open(self.manifests_filename, 'w') as manifest:
                 yaml.safe_dump(self.mods_status, manifest)
 
-            return 0
+            return 1
         except Exception as er:
             logger.error(er)
-            return 1
+            return 0
