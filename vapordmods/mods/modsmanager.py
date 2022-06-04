@@ -26,18 +26,9 @@ class ModsManager:
     _NEXUSMODS_NAME = 'nexusmods'
     _WORKSHOP_NAME = 'workshop'
 
-    def __init__(self, install_dir: str,
-                 web_api_key: str = None,
-                 steam_username: str = None,
-                 steam_password: str = None,
-                 steam_guard: str = None,
-                 two_factor_code: str = None):
+    def __init__(self, install_dir: str, client: SteamManager = None):
         self.install_dir = install_dir
-        self.web_api_key = web_api_key
-        self.steam_username = steam_username
-        self.steam_password = steam_password
-        self.steam_guard = steam_guard
-        self.two_factor_code = two_factor_code
+        self.client = client
         self.manifests_filename = os.path.join(install_dir, self._MANIFESTS_FILENAME)
         self.cfg_filename = os.path.join(install_dir, self._CFG_FILENAME)
         self.cfg_data = {}
@@ -187,14 +178,8 @@ class ModsManager:
             list_to_update_workshop = pd.DataFrame.from_dict(self.mods_status).query(f"need_update == True & "
                                                                                      f"provider == '{self._WORKSHOP_NAME}'")
             if not list_to_update_workshop.empty:
-                steam_update = SteamManager(web_api_key=self.web_api_key,
-                                            username=self.steam_username,
-                                            password=self.steam_password,
-                                            steam_guard_code=self.steam_guard,
-                                            two_factor_code=self.two_factor_code
-                                            )
                 for idx, row in list_to_update_workshop.iterrows():
-                    result = await steam_update.update_worksop_mod(row['app'], row['mods'])
+                    result = await self.client.update_worksop_mod(row['app'], row['mods'])
                     if result == 1 and result(1):
                         Path(result(1)).symlink_to(os.path.join(row['mods_dir'], row['title']))
                     elif result == 1:
