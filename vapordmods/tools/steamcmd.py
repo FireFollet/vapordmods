@@ -10,6 +10,7 @@ from steam.client.cdn import CDNClient, CDNDepotFile
 from steam.enums import EResult
 from steam.client.builtins.web import webapi, make_requests_session
 from steam.exceptions import ManifestError
+from vapordmods.tools.utils import get_user_app_data
 
 LOG = logging.getLogger(__name__)
 
@@ -17,14 +18,14 @@ LOG = logging.getLogger(__name__)
 class SteamManager:
 
     def __init__(self,
-                 web_api_key: str,
                  username: str,
                  password: str,
+                 web_api_key: str = None,
                  steam_guard_code: str = None,
                  two_factor_code: str = None,
-                 data_login_location: str = None
+                 user_app_data_dir: str = None
                  ):
-        if steam_guard_code is not None and two_factor_code is not None:
+        if steam_guard_code and two_factor_code:
             LOG.error('steam_guard_code and two_factor_code are not None. You can only provide one of them.')
             raise SystemExit
 
@@ -35,19 +36,13 @@ class SteamManager:
         self.steam_guard_code = steam_guard_code
         self.two_factor_code = two_factor_code
 
-        if data_login_location is None:
-            platform = sys.platform
-            if platform.startswith('linux'):
-                data_login_location = os.path.join(os.getenv('HOME'), '.vapordmods')
-            elif platform.startswith('win32'):
-                data_login_location = os.path.join(os.getenv('LOCALAPPDATA'), 'vapordmods')
-            else:
-                raise SystemError(f'The platform {platform} is not supported.')
+        if not user_app_data_dir:
+            user_app_data_dir = os.path.join(get_user_app_data(), '.vapordmods')
 
-        if not exists(data_login_location):
-            os.makedirs(data_login_location, exist_ok=True)
+        if not exists(user_app_data_dir):
+            os.makedirs(user_app_data_dir, exist_ok=True)
 
-        self.client.set_credential_location(data_login_location)
+        self.client.set_credential_location(user_app_data_dir)
 
         @client.on('error')
         def handle_error(result):
