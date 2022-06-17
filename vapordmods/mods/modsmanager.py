@@ -1,5 +1,6 @@
-import steam.monkey
-steam.monkey.patch_minimal()
+from steam.monkey import patch_minimal
+patch_minimal()
+
 import asyncio
 import aiofiles
 import aiofiles.os
@@ -27,6 +28,7 @@ class ModsManager:
     _WORKSHOP_NAME = 'workshop'
 
     def __init__(self, install_dir: str, client: SteamManager = None):
+        self.default_mods_dir = None
         self.install_dir = install_dir
         self.client = client
         self.manifests_filename = os.path.join(install_dir, self._MANIFESTS_FILENAME)
@@ -71,10 +73,7 @@ class ModsManager:
             raise KeyError(mods_validator.errors)
         self.cfg_data = cfg_data
 
-        if self.cfg_data['config']['default_mods_dir']:
-            self.default_mods_dir = self.cfg_data['config']['default_mods_dir']
-        else:
-            self.default_mods_dir = self.install_dir
+        self.default_mods_dir = cfg_data['config']['default_mods_dir'] or self.install_dir
 
     async def load_mods_info(self):
         if os.path.exists(self.manifests_filename):
@@ -113,7 +112,7 @@ class ModsManager:
             df_update = pd.DataFrame(mods_update)
             df_update['need_update'] = False
 
-            if len(self.mods_info) > 0:
+            if len(self.mods_info):
                 df_current = pd.DataFrame(self.mods_info)
                 df_status = df_update.merge(df_current, on=['provider', 'app', 'mods'], suffixes=(None, suffixes))
                 df_status['need_update'] = df_status['version'] != df_status[f'version{suffixes}']
@@ -121,7 +120,7 @@ class ModsManager:
                 df_status = df_update
                 df_status['need_update'] = True
 
-            self.mods_status = df_status.filter(items=df_update.columns.to_list()).to_dict()
+            self.mods_status = df_status.to_dict('records')
             return 1
         except Exception as er:
             logger.error(f"Error during update for mods: {er}")
@@ -142,15 +141,14 @@ class ModsManager:
             resp = await session.request(method="GET", url=row['download_url'])
 
             if resp.status == 200:
-                if not await aiofiles.os.path.exists(row['mods_dir']):
-                    await aiofiles.os.makedirs(row['mods_dir'], exist_ok=True)
+                await aiofiles.os.makedirs(row['mods_dir'], exist_ok=True)
 
                 filename = os.path.join(row['mods_dir'], resp.url.name)
                 destination = os.path.join(row['mods_dir'], row['full_mods_name'])
                 async with aiofiles.open(filename, 'wb') as f:
                     await f.write(await resp.read())
 
-                if await self.__extract_mods(filename, destination) == 1:
+                if await self.__extract_mods(filename, destination):
                     await aiofiles.os.remove(filename)
             else:
                 logger.error(f"Error with the request: {resp.status} {resp.text()}")
@@ -159,31 +157,28 @@ class ModsManager:
             logger.error(er)
 
     async def update_mods(self):
-        if len(self.mods_status) == 0:
+        if not len(self.mods_status):
             logger.error(f"No mods information. Please execute the method 'refresh_mods_info'.")
             return 0
 
         try:
-            list_to_update = pd.DataFrame.from_dict(self.mods_status).query(f"need_update == True & provider in "
-                                                                            f"['{self._THUNDERSTORE_NAME}',"
-                                                                            f"'{self._NEXUSMODS_NAME}']")
-            if not list_to_update.empty:
+            list_to_update = [x for x in self.mods_status if x['need_update'] == 'True' and x['provider'] in
+                              [self._THUNDERSTORE_NAME, self._NEXUSMODS_NAME]]
+
+            if len(list_to_update):
                 async with aiohttp.ClientSession() as session:
-                    tasks = []
-                    for idx, row in list_to_update.iterrows():
-                        tasks.append(self.__make_request(session, row))
+                    tasks = [self.__make_request(session, i) for i in list_to_update]
 
                     await asyncio.gather(*tasks)
 
-            list_to_update_workshop = pd.DataFrame.from_dict(self.mods_status).query(f"need_update == True & "
-                                                                                     f"provider == '{self._WORKSHOP_NAME}'")
-            if not list_to_update_workshop.empty:
-                for idx, row in list_to_update_workshop.iterrows():
-                    result = await self.client.update_worksop_mod(row['app'], row['mods'])
+            list_to_update_workshop = [x for x in self.mods_status if x['need_update'] == 'True' and x['provider'] == self._WORKSHOP_NAME]
+            if len(list_to_update_workshop):
+                for i in list_to_update_workshop:
+                    result = await self.client.update_worksop_mod(i['app'], i['mods'])
                     if result == 1 and result(1):
-                        Path(result(1)).symlink_to(os.path.join(row['mods_dir'], row['title']))
+                        Path(result(1)).symlink_to(os.path.join(i['mods_dir'], i['title']))
                     elif result == 1:
-                        logger.error(f"The symlink for the APP_ID {row['app']} and published_file_id {row['mods']} was note created.")
+                        logger.error(f"The symlink for the APP_ID {i['app']} and published_file_id {i['mods']} was note created.")
                     else:
                         logger.error(result(1))
 

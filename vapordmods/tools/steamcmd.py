@@ -1,10 +1,12 @@
+from steam.monkey import patch_minimal
+patch_minimal()
+
 import logging
 import os
 import asyncio
-import sys
 import aiofiles
+import aiofiles.os
 from builtins import staticmethod
-from os.path import exists
 from steam.client import SteamClient
 from steam.client.cdn import CDNClient, CDNDepotFile
 from steam.enums import EResult
@@ -36,13 +38,10 @@ class SteamManager:
         self.steam_guard_code = steam_guard_code
         self.two_factor_code = two_factor_code
 
-        if not user_app_data_dir:
-            user_app_data_dir = os.path.join(get_user_app_data(), '.vapordmods')
+        self.user_app_data_dir = user_app_data_dir or os.path.join(get_user_app_data(), '.vapordmods')
+        os.makedirs(self.user_app_data_dir, exist_ok=True)
 
-        if not exists(user_app_data_dir):
-            os.makedirs(user_app_data_dir, exist_ok=True)
-
-        self.client.set_credential_location(user_app_data_dir)
+        self.client.set_credential_location(self.user_app_data_dir)
 
         @client.on('error')
         def handle_error(result):
@@ -127,8 +126,7 @@ class SteamManager:
         async def dl_file(dfile: CDNDepotFile):
             file = dfile.read()
             path = os.path.join(mods_dir, pubfile['title'])
-            if not exists(path):
-                os.makedirs(path)
+            await aiofiles.os.makedirs(path, exist_ok=True)
 
             filename = os.path.join(path, dfile.filename)
             async with aiofiles.open(filename, 'wb') as f:
