@@ -14,18 +14,6 @@ class workshop(BaseApi):
         super().__init__()
 
     async def get_update(self, app_id: str, published_file_id: str, mods_dir: str, version: str = None, api_key: str = None) -> int:
-        """
-        Get the mod update from Steam Workshop API and return 0 if the request is successfull.
-
-        :param str app_id: The namespace of the mod (Author)
-        :param str published_file_id: The name of the mod (mod)
-        :param str mods_dir: The directory where the mod need to be installed
-        :param str version: If specified, get the requested version of the mod. Get the latest version if not specified (default None)
-        :param str api_key: Not required
-        :return: Return 0 if the request is successfull else return 1
-        :rtype: int
-        """
-
         if not api_key:
             api_logger.error(f'{app_id}-{published_file_id}: The steam_api_key is null or empty and cannot get an '
                              f'update for the mod. Please provide a valid api key.')
@@ -45,7 +33,7 @@ class workshop(BaseApi):
                     self.description = j['response']['publishedfiledetails'][0]['file_description']
                     self.full_mods_name = app_id + '-' + published_file_id
 
-                    api_logger.info(
+                    api_logger.debug(
                         f'The request from the "Thunderstore" API was successfull for the APP ID {app_id} and the published file ID {published_file_id}.')
                     return 0
                 else:

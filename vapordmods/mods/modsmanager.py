@@ -1,6 +1,9 @@
 from steam.monkey import patch_minimal
+
 patch_minimal()
 
+import shutil
+import tempfile
 import asyncio
 import aiofiles
 import aiofiles.os
@@ -15,7 +18,6 @@ from pathlib import Path
 from vapordmods.api import worhshop, thunderstore, nexusmods
 from vapordmods.mods.schema import schema
 from vapordmods.tools.steamcmd import SteamManager
-
 
 logger = logging.getLogger(__name__)
 
@@ -46,7 +48,7 @@ class ModsManager:
             raise NotADirectoryError(f"The installdir {self.install_dir} doesn't exist.")
 
         if not os.path.exists(self.cfg_filename) and not os.access(self.install_dir, os.W_OK):
-            raise PermissionError(f"Cannot write to the folder {self.install_dir }.")
+            raise PermissionError(f"Cannot write to the folder {self.install_dir}.")
 
         if not os.path.exists(self.cfg_filename):
             loop.run_until_complete(self.write_cfg_filename())
@@ -97,16 +99,18 @@ class ModsManager:
                 if col not in df_cfg.columns:
                     df_cfg[col] = ''
 
-            df_cfg.loc[((df_cfg['mods_dir'] == '') | (df_cfg['mods_dir'] is None)), 'mods_dir'] = self.default_mods_dir
             df_cfg = df_cfg.fillna('')
+            df_cfg.loc[((df_cfg['mods_dir'] == '') | (df_cfg['mods_dir'] is None)), 'mods_dir'] = self.default_mods_dir
 
             # Requests mods update
             mods_update = []
             apicall = None
-            list_api_key = {self._THUNDERSTORE_NAME: None, self._NEXUSMODS_NAME: nmods_api_key, self._WORKSHOP_NAME: steam_api_key}
+            list_api_key = {self._THUNDERSTORE_NAME: None, self._NEXUSMODS_NAME: nmods_api_key,
+                            self._WORKSHOP_NAME: steam_api_key}
             for idx, row in df_cfg.iterrows():
                 apicall = getattr(globals()[row['provider']], row['provider'])()
-                if await apicall.get_update(row['app'], row['mods'], row['mods_dir'], row['version'], list_api_key[row['provider']]) == 0:
+                if await apicall.get_update(row['app'], row['mods'], row['mods_dir'], row['version'],
+                                            list_api_key[row['provider']]) == 0:
                     mods_update.append(apicall.return_data())
 
             df_update = pd.DataFrame(mods_update)
@@ -127,14 +131,30 @@ class ModsManager:
             return 0
 
     @staticmethod
-    async def __extract_mods(filename, destination):
+    async def __extract_mods(filename, destination, row):
         with zipfile.ZipFile(filename, 'r') as file:
+            temp_dir = os.path.join(tempfile.gettempdir(), 'vapord_temp')
             try:
-                file.extractall(destination)
+                if row['provider'].lower() == 'thunderstore' and 'bepinexpack' in row['full_mods_name'].lower():
+                    benpinex = 'BepInEx'
+                    file_list = [x for x in file.namelist() if benpinex in x]
+                    benpinex_dir = file_list[0][0:file_list[0].index(os.sep)]
+                    temp_dir_bepinex = os.path.join(temp_dir, benpinex_dir)
+                    file.extractall(temp_dir, file_list)
+                    cp_dir = temp_dir_bepinex
+                else:
+                    file.extractall(temp_dir)
+                    cp_dir = temp_dir
+
+                shutil.copytree(cp_dir, row['mods_dir'], dirs_exist_ok=True)
+
                 return 1
             except Exception as er:
                 logger.error(er)
                 return 0
+            finally:
+                if await aiofiles.os.path.exists(temp_dir):
+                    shutil.rmtree(temp_dir)
 
     async def __make_request(self, session, row):
         try:
@@ -148,7 +168,7 @@ class ModsManager:
                 async with aiofiles.open(filename, 'wb') as f:
                     await f.write(await resp.read())
 
-                if await self.__extract_mods(filename, destination):
+                if await self.__extract_mods(filename, destination, row):
                     await aiofiles.os.remove(filename)
             else:
                 logger.error(f"Error with the request: {resp.status} {resp.text()}")
@@ -162,7 +182,7 @@ class ModsManager:
             return 0
 
         try:
-            list_to_update = [x for x in self.mods_status if x['need_update'] == 'True' and x['provider'] in
+            list_to_update = [x for x in self.mods_status if x['need_update'] and x['provider'] in
                               [self._THUNDERSTORE_NAME, self._NEXUSMODS_NAME]]
 
             if len(list_to_update):
@@ -171,14 +191,16 @@ class ModsManager:
 
                     await asyncio.gather(*tasks)
 
-            list_to_update_workshop = [x for x in self.mods_status if x['need_update'] == 'True' and x['provider'] == self._WORKSHOP_NAME]
+            list_to_update_workshop = [x for x in self.mods_status if
+                                       x['need_update'] == 'True' and x['provider'] == self._WORKSHOP_NAME]
             if len(list_to_update_workshop):
                 for i in list_to_update_workshop:
                     result = await self.client.update_worksop_mod(i['app'], i['mods'])
                     if result == 1 and result(1):
                         Path(result(1)).symlink_to(os.path.join(i['mods_dir'], i['title']))
                     elif result == 1:
-                        logger.error(f"The symlink for the APP_ID {i['app']} and published_file_id {i['mods']} was note created.")
+                        logger.error(
+                            f"The symlink for the APP_ID {i['app']} and published_file_id {i['mods']} was note created.")
                     else:
                         logger.error(result(1))
 
