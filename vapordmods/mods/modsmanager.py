@@ -76,7 +76,7 @@ class ModsManager:
                 logger.error(mods_validator.errors)
                 return False
         except Exception as er:
-            logger.exception(er)
+            logger.error(er)
             return False
 
         self.cfg_data = cfg_data
