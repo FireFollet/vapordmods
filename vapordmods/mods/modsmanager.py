@@ -61,7 +61,7 @@ class ModsManager:
 
     @staticmethod
     async def __load_yaml(filename):
-        if os.path.exists(filename):
+        if await aiofiles.os.path.exists(filename):
             async with aiofiles.open(filename, 'r') as file:
                 return yaml.safe_load(await file.read())
         else:
@@ -71,11 +71,17 @@ class ModsManager:
         cfg_data = await self.__load_yaml(self.cfg_filename)
         mods_validator = Validator(schema)
 
-        if not mods_validator.validate(cfg_data):
-            raise KeyError(mods_validator.errors)
-        self.cfg_data = cfg_data
+        try:
+            if not mods_validator.validate(cfg_data):
+                logger.error(mods_validator.errors)
+                return False
+        except Exception as er:
+            logger.exception(er)
+            return False
 
+        self.cfg_data = cfg_data
         self.default_mods_dir = cfg_data['config']['default_mods_dir'] or self.install_dir
+        return True
 
     async def load_mods_info(self):
         if os.path.exists(self.manifests_filename):
