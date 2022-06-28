@@ -15,7 +15,7 @@ import zipfile
 import pandas as pd
 from cerberus import Validator
 from pathlib import Path
-from vapordmods.api import worhshop, thunderstore, nexusmods
+from vapordmods.api import worhshop, thunderstore, nexusmods, github
 from vapordmods.mods.schema import schema
 from vapordmods.tools.steamcmd import SteamManager
 
@@ -118,7 +118,7 @@ class ModsManager:
                 apicall = getattr(globals()[row['provider']], row['provider'])()
                 if row['provider'] in (self._THUNDERSTORE_NAME, self._NEXUSMODS_NAME, self._WORKSHOP_NAME):
                     params = {
-                        'namepsace': row['app'],
+                        'namespace': row['app'],
                         'name': row['mods'],
                         'mods_dir': row['mods_dir'],
                         'version': row['version'],
