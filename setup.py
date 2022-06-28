@@ -5,10 +5,10 @@ with open('README.md', 'r', encoding='utf-8') as fh:
 
 setup(
     name='vapordmods',
-    version='0.2.4',
+    version='0.2.5',
     author='FireFollet',
     author_email='',
-    description='Manage multiples mods provider like Thunderstore, Nexismods and Steam Workshop.',
+    description='Manage multiples mods provider: Thunderstore, Nexismods, Seam Workshop and Github.',
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://github.com/FireFollet/vapordmods",

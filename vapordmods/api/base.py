@@ -15,7 +15,7 @@ class BaseApi(ABC):
         self.download_url = None
 
     @abstractmethod
-    async def get_update(self, namespace: str, name: str, mods_dir: str, version: str = None, api_key: str = None) -> int:
+    async def get_update(self, **kwargs) -> int:
         pass
 
     def return_data(self):

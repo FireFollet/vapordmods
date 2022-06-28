@@ -19,7 +19,7 @@ schema = {
                 'provider': {
                     'required': True,
                     'type': 'string',
-                    'allowed': ['thunderstore', 'nexusmods', 'workshop'],
+                    'allowed': ['thunderstore', 'nexusmods', 'workshop', 'github'],
                 },
                 'app': {
                     'required': True,
@@ -34,6 +34,11 @@ schema = {
                 'mods_dir': {
                     'required': False,
                     'nullable': True,
+                    'type': 'string',
+                },
+                'filename': {
+                    'required': False,
+                    'nullable': False,
                     'type': 'string',
                 },
             },

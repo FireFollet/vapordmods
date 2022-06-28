@@ -28,6 +28,7 @@ class ModsManager:
     _THUNDERSTORE_NAME = 'thunderstore'
     _NEXUSMODS_NAME = 'nexusmods'
     _WORKSHOP_NAME = 'workshop'
+    _GITHUB_NAME = 'github'
 
     def __init__(self, install_dir: str, client: SteamManager = None):
         self.default_mods_dir = None
@@ -112,11 +113,27 @@ class ModsManager:
             mods_update = []
             apicall = None
             list_api_key = {self._THUNDERSTORE_NAME: None, self._NEXUSMODS_NAME: nmods_api_key,
-                            self._WORKSHOP_NAME: steam_api_key}
+                            self._WORKSHOP_NAME: steam_api_key, self._GITHUB_NAME: None}
             for idx, row in df_cfg.iterrows():
                 apicall = getattr(globals()[row['provider']], row['provider'])()
-                if await apicall.get_update(row['app'], row['mods'], row['mods_dir'], row['version'],
-                                            list_api_key[row['provider']]) == 0:
+                if row['provider'] in (self._THUNDERSTORE_NAME, self._NEXUSMODS_NAME, self._WORKSHOP_NAME):
+                    params = {
+                        'namepsace': row['app'],
+                        'name': row['mods'],
+                        'mods_dir': row['mods_dir'],
+                        'version': row['version'],
+                        'api_key': list_api_key[row['provider']]
+                    }
+                else:
+                    params = {
+                        'owner': row['app'],
+                        'repo': row['mods'],
+                        'mods_dir': row['mods_dir'],
+                        'version': row['version'],
+                        'filename': row['filename']
+                    }
+
+                if await apicall.get_update(**params) == 0:
                     mods_update.append(apicall.return_data())
 
             df_update = pd.DataFrame(mods_update)
@@ -189,7 +206,7 @@ class ModsManager:
 
         try:
             list_to_update = [x for x in self.mods_status if x['need_update'] and x['provider'] in
-                              [self._THUNDERSTORE_NAME, self._NEXUSMODS_NAME]]
+                              [self._THUNDERSTORE_NAME, self._NEXUSMODS_NAME, self._GITHUB_NAME]]
 
             if len(list_to_update):
                 async with aiohttp.ClientSession() as session:
