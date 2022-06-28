@@ -5,7 +5,7 @@ with open('README.md', 'r', encoding='utf-8') as fh:
 
 setup(
     name='vapordmods',
-    version='0.2.5',
+    version='0.2.6',
     author='FireFollet',
     author_email='',
     description='Manage multiples mods provider: Thunderstore, Nexismods, Seam Workshop and Github.',
